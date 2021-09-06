@@ -11,4 +11,6 @@ int main(int argc, char const *argv[])
   //int tiempob = 0;  
   printf("I'm the REPARTIDOR process and my PID is: %i y el PID de mi papi es %i\n", getpid(), getppid());
   printf("repartidor numero %i\n", n);
+  
+
 }

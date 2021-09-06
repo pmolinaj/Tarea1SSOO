@@ -9,9 +9,38 @@
 
 void signal_handlr(int signal, siginfo_t *info_signal, void *ucontext)
 {
-  int valor = info_signal->si_value.sival_int;
-  printf("el valor recibido es: %d\n", valor);
+  //int valor = info_signal->si_value.sival_int;
+  //printf("el valor recibido es: %d\n", valor);
 }
+
+void alarm_handlr(int signal)
+{
+  //lo unico que no funciona igual que antes es quue i es siempre 0, entonces los distintos repartidores tienen siempre 
+  //el mismo número
+  //char *filename = "input.txt";
+  //InputFile *data_in = read_file(filename);
+  //int t = atoi(data_in->lines[1][0]);
+  //int y = atoi(data_in->lines[1][1]); //Cantidad de repartidores a crear
+  int i = 0;
+  pid_t repartidor = fork();
+  if (repartidor == 0)
+  { 
+    int x = i+1;
+    printf("%d\n", x);
+    int length = snprintf( NULL, 0, "%d", x );
+    char* str = malloc( length + 1 );
+    snprintf( str, length + 1, "%d", x );
+    char *args[]={"./repartidor",str, NULL};
+    execvp(args[0],args);
+  }
+
+  else if (repartidor > 0){
+      alarm(5);
+    }
+  
+  }
+
+
 
 int main(int argc, char const *argv[])
 {
@@ -50,20 +79,26 @@ int main(int argc, char const *argv[])
       int t = atoi(data_in->lines[1][0]); //tiempo que pasa entre la creación de c/repartidor
       printf("Hay que crear repartidores cada %d segundos\n", t);
       printf("Tengo que generar %d repartidores\n", x);
-      connect_sigaction(SIGUSR1, signal_handlr);
-      for(int i=0;i<3;i++) // Cambiar por i < x, para que se generen x repartidores.
-      {
-        if(fork() == 0)
-        { sleep(t); //Con este sleep hacemos que se creen cada dos segundos los repartidores
-          int x = i+1;
-          int length = snprintf( NULL, 0, "%d", x );
-          char* str = malloc( length + 1 );
-          snprintf( str, length + 1, "%d", x );
-          char *args[]={"./repartidor",str, NULL};
-          execvp(args[0],args);
-        }
-        sleep(t); //Con este sleep también hacemos que se creen cada dos segundos los repartidores. (Con 2 sleep funciona, pero con uno no)
+      signal(SIGALRM, alarm_handlr);
+      alarm(5);
+      connect_sigaction(SIGUSR1, signal_handlr); //Esto conecta la señal que viene de los semaforos con la funcion signal handlr
+      for (int i = 0; i<5;i++){ //Cambiar el 5 por x
+        pause();
       }
+      //sleep(t);
+      //for(int i=0;i<3;i++) // Cambiar por i < x, para que se generen x repartidores.
+      //{
+      //  sleep(t);//Con este sleep hacemos que se creen cada t segundos los repartidores
+      //  if(fork() == 0)
+      //  { 
+      //    int x = i+1;
+      //    int length = snprintf( NULL, 0, "%d", x );
+      //    char* str = malloc( length + 1 );
+      //    snprintf( str, length + 1, "%d", x );
+      //    char *args[]={"./repartidor",str, NULL};
+      //    execvp(args[0],args);
+      //  }
+      //}
       pid_t wpid;
       while ((wpid = wait(&status)) > 0); //Con esto nos aseguramos que el proceso Fábrica espera a todos sus hijos (Procesos de Repartidores) 
       printf("Proceso fabrica recién terminó");
