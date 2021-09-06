@@ -7,6 +7,12 @@
 #include <sys/wait.h>
 #include "../file_manager/manager.h"
 
+void signal_handlr(int signal, siginfo_t *info_signal, void *ucontext)
+{
+  int valor = info_signal->si_value.sival_int;
+  printf("el valor recibido es: %d\n", valor);
+}
+
 int main(int argc, char const *argv[])
 {
   printf("I'm the DCCUBER process and my PID is: %i\n", getpid());
@@ -40,35 +46,55 @@ int main(int argc, char const *argv[])
   
   if (fabrica == 0)
   {   
-      pid_t id_padre = getppid();
-      int x = atoi(data_in->lines[1][1]);
-      printf("soy el proceso fábrica, siempre retorno PID cero, pero el id de mi papá es: %d\n", id_padre);
+      int x = atoi(data_in->lines[1][1]); //Cantidad de repartidores a crear
+      int t = atoi(data_in->lines[1][0]); //tiempo que pasa entre la creación de c/repartidor
+      printf("Hay que crear repartidores cada %d segundos\n", t);
       printf("Tengo que generar %d repartidores\n", x);
-      for(int i=0;i<5;i++) // loop will run n times (n=5)
+      connect_sigaction(SIGUSR1, signal_handlr);
+      for(int i=0;i<3;i++) // Cambiar por i < x, para que se generen x repartidores.
       {
         if(fork() == 0)
-        {
-          int a = i;
-          char num[20];
-          //itoa(a, num, 10);
-          char *args[]={"./repartidor",num, NULL};
+        { sleep(t); //Con este sleep hacemos que se creen cada dos segundos los repartidores
+          int x = i+1;
+          int length = snprintf( NULL, 0, "%d", x );
+          char* str = malloc( length + 1 );
+          snprintf( str, length + 1, "%d", x );
+          char *args[]={"./repartidor",str, NULL};
           execvp(args[0],args);
         }
+        sleep(t); //Con este sleep también hacemos que se creen cada dos segundos los repartidores. (Con 2 sleep funciona, pero con uno no)
       }
+      pid_t wpid;
+      while ((wpid = wait(&status)) > 0); //Con esto nos aseguramos que el proceso Fábrica espera a todos sus hijos (Procesos de Repartidores) 
+      printf("Proceso fabrica recién terminó");
   }
 
   else if (fabrica > 0)
   {
-    printf("PID FAbRICA: %d\n", fabrica);
+    
     //Creamos al segundo proceso hijo del proceso principal, que será el primer semáforo.
     pid_t semaforo_1 = fork();
 
     if (semaforo_1 == 0)
     { 
-      //printf("soy el proceso semáforo (1), siempre retorno PID cero, pero el id de mi papá es: %d\n", id_padre);
-      char *args[]={"./semaforo",NULL};
+      int id_semaforo_1 = 1;
+      int length_semaforo_1 = snprintf( NULL, 0, "%d", id_semaforo_1);
+      char* str_semaforo_1 = malloc( length_semaforo_1 + 1 );
+      snprintf( str_semaforo_1, length_semaforo_1 + 1, "%d", id_semaforo_1);
+
+      int delay = atoi(data_in->lines[1][2]);
+      int length = snprintf( NULL, 0, "%d", delay );
+      char* str = malloc( length + 1 );
+      snprintf( str, length + 1, "%d", delay );
+
+      int length_fabrica = snprintf( NULL, 0, "%d", fabrica );
+      char* str_fabrica = malloc( length_fabrica + 1 );
+      snprintf( str_fabrica, length_fabrica + 1, "%d", fabrica );
+      char *args[]={"./semaforo", str, str_fabrica, str_semaforo_1,  NULL};
       execvp(args[0],args); //Con esto mandamos el proceso al archivo semaforo/main.c
-      
+      free(str);
+      free(str_fabrica);
+            
     }
     
     else if (semaforo_1 > 0)
@@ -78,9 +104,21 @@ int main(int argc, char const *argv[])
       pid_t semaforo_2 = fork();
 
       if (semaforo_2 == 0)
-      { pid_t id_padre2 = getppid();
-        printf("soy el proceso semáforo (2), siempre retorno PID cero, pero el id de mi papá es: %d\n", id_padre2);
-        char *args[]={"./semaforo",NULL};
+      {
+        int id_semaforo_2 = 2;
+        int length_semaforo_2 = snprintf( NULL, 0, "%d", id_semaforo_2);
+        char* str_semaforo_2 = malloc( length_semaforo_2 + 1 );
+        snprintf( str_semaforo_2, length_semaforo_2 + 1, "%d", id_semaforo_2);
+
+        int delay = atoi(data_in->lines[1][3]);
+        int length = snprintf( NULL, 0, "%d", delay );
+        char* str = malloc( length + 1 );
+        snprintf( str, length + 1, "%d", delay );
+
+        int length_fabrica = snprintf( NULL, 0, "%d", fabrica );
+        char* str_fabrica = malloc( length_fabrica + 1 );
+        snprintf( str_fabrica, length_fabrica + 1, "%d", fabrica );
+        char *args[]={"./semaforo", str, str_fabrica, str_semaforo_2, NULL}; 
         execvp(args[0],args); //Con esto mandamos el proceso al archivo semaforo/main.c
       }
 
@@ -91,10 +129,21 @@ int main(int argc, char const *argv[])
         pid_t semaforo_3 = fork();
 
         if (semaforo_3 == 0)
-        { //pid_t id_padre = getppid();
-          pid_t id_padre = getppid();
-          printf("soy el proceso semáforo (3), siempre retorno PID cero, pero el id de mi papá es: %d\n", id_padre);
-          char *args[]={"./semaforo",NULL};
+        { 
+          int id_semaforo_3 = 3;
+          int length_semaforo_3 = snprintf( NULL, 0, "%d", id_semaforo_3);
+          char* str_semaforo_3 = malloc( length_semaforo_3 + 1 );
+          snprintf( str_semaforo_3, length_semaforo_3 + 1, "%d", id_semaforo_3);      
+
+          int delay = atoi(data_in->lines[1][4]);
+          int length = snprintf( NULL, 0, "%d", delay );
+          char* str = malloc( length + 1 );
+          snprintf( str, length + 1, "%d", delay );
+
+          int length_fabrica = snprintf( NULL, 0, "%d", fabrica );
+          char* str_fabrica = malloc( length_fabrica + 1 );
+          snprintf( str_fabrica, length_fabrica + 1, "%d", fabrica );
+          char *args[]={"./semaforo", str, str_fabrica, str_semaforo_3, NULL};
           execvp(args[0],args); //Con esto mandamos el proceso al archivo semaforo/main.c
         }
 
@@ -109,8 +158,6 @@ int main(int argc, char const *argv[])
     waitpid(fabrica, &status, 0);
     //printf("Exit status: %d\n", WEXITSTATUS(status));
   }
-  //printf("Liberando memoria...\n");
-  //input_file_destroy(data_in);
 }
 
 
